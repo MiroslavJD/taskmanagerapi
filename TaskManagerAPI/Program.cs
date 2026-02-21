@@ -59,8 +59,14 @@ builder.Services.AddSwaggerGen(c =>
 // DATABASE
 // ======================================================
 
+var conn = builder.Configuration.GetConnectionString("Default");
+if (string.IsNullOrWhiteSpace(conn))
+{
+    throw new InvalidOperationException("Missing DB connection string. Ensure ConnectionStrings__Default is set.");
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    options.UseNpgsql(conn));
 
 
 // ======================================================
@@ -79,6 +85,18 @@ builder.Services.AddScoped<AuthService>();
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 var issuer = builder.Configuration["Jwt:Issuer"]!;
 var audience = builder.Configuration["Jwt:Audience"]!;
+
+if (string.IsNullOrWhiteSpace(jwtKey) ||
+    string.IsNullOrWhiteSpace(issuer) ||
+    string.IsNullOrWhiteSpace(audience))
+{
+    throw new InvalidOperationException("Missing JWT config. Ensure Jwt__Key, Jwt__Issuer, Jwt__Audience are set in Render Environment.");
+}
+
+
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(conn));
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
