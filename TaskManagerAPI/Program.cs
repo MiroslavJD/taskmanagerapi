@@ -1,20 +1,35 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 using TaskManagerAPI.Data;
 using TaskManagerAPI.Services;
-using Microsoft.OpenApi.Models;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1) Services (ВСИЧКО тук)
+// ======================================================
+// FIX FOR RENDER PORT (CRITICAL)
+// ======================================================
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+
+// ======================================================
+// SERVICES
+// ======================================================
+
 builder.Services.AddControllers();
+
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "TaskManagerAPI", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "TaskManagerAPI",
+        Version = "v1"
+    });
 
     var securityScheme = new OpenApiSecurityScheme
     {
@@ -39,21 +54,34 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// EF Core
+
+// ======================================================
+// DATABASE
+// ======================================================
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
-// App services
+
+// ======================================================
+// APPLICATION SERVICES
+// ======================================================
+
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<AuthService>();
 
-// JWT Auth
+
+// ======================================================
+// JWT AUTHENTICATION
+// ======================================================
+
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 var issuer = builder.Configuration["Jwt:Issuer"]!;
 var audience = builder.Configuration["Jwt:Audience"]!;
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -62,32 +90,63 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+
             ValidIssuer = issuer,
             ValidAudience = audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+
+            IssuerSigningKey =
+                new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtKey))
         };
     });
 
 builder.Services.AddAuthorization();
 
-// 2) Build (заключва services)
+
+// ======================================================
+// BUILD
+// ======================================================
+
 var app = builder.Build();
 
-// 3) Middleware pipeline (тук НЕ добавяш builder.Services!)
-var enableSwagger = app.Configuration.GetValue<bool>("EnableSwagger");
+
+// ======================================================
+// SWAGGER (ALWAYS ENABLED FOR RENDER)
+// ======================================================
 
 app.UseSwagger();
+
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManagerAPI v1");
     c.RoutePrefix = "swagger";
 });
 
-app.UseHttpsRedirection();
+
+// ======================================================
+// IMPORTANT: DO NOT USE HTTPS REDIRECTION ON RENDER
+// ======================================================
+// app.UseHttpsRedirection();
+
+
+// ======================================================
+// AUTH
+// ======================================================
 
 app.UseAuthentication();
+
 app.UseAuthorization();
 
+
+// ======================================================
+// CONTROLLERS
+// ======================================================
+
 app.MapControllers();
+
+
+// ======================================================
+// RUN
+// ======================================================
 
 app.Run();
