@@ -74,7 +74,9 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // 3) Middleware pipeline (тук Ќ≈ добав€ш builder.Services!)
-if (app.Environment.IsDevelopment())
+var enableSwagger = app.Configuration.GetValue<bool>("EnableSwagger");
+
+if (app.Environment.IsDevelopment() || enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
