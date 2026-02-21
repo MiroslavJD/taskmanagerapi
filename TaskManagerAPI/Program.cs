@@ -76,11 +76,12 @@ var app = builder.Build();
 // 3) Middleware pipeline (тук Ќ≈ добав€ш builder.Services!)
 var enableSwagger = app.Configuration.GetValue<bool>("EnableSwagger");
 
-if (app.Environment.IsDevelopment() || enableSwagger)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManagerAPI v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseHttpsRedirection();
 
