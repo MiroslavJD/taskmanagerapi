@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16
+    container_name: taskmanager_db
+    environment:
+      POSTGRES_DB: taskmanagerdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./TaskManagerAPI
+      dockerfile: Dockerfile
+    container_name: taskmanager_api
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: Host=db;Port=5432;Database=taskmanagerdb;Username=postgres;Password=postgres
+      Jwt__Key: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32+_CHARS"
+      Jwt__Issuer: "TaskManagerAPI"
+      Jwt__Audience: "TaskManagerAPI"
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
